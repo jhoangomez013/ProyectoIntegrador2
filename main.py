@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
 
+
 # Crea las tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=engine)
 # Dependencia para obtener sesión de base de datos
@@ -53,13 +54,16 @@ class Inventario(BaseModel):
     cantidad: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 # Crear la aplicación FastAPI
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 # Servir archivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+
+#Endpoint Porductos
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -74,87 +78,202 @@ def create_producto(producto: Producto, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_producto)
     return {"message": "Producto creado"}
-# Eliminar un celular
-@app.delete("/celulares/{id}")
-def delete_celular(id: str, db: Session = Depends(get_db)):
-    celular = db.query(models.CelularDB).filter(models.CelularDB.id == id).first()
-    if not celular:
-        raise HTTPException(status_code=404, detail="Celular no encontrado")
-    db.delete(celular)
+@app.get("/productos/{id}", response_model=Producto)
+def get_producto(id: int, db: Session = Depends(get_db)):
+    return db.query(models.ProductoDB).filter(models.ProductoDB.id == id).first()
+
+@app.put("/productos/{id}")
+def update_producto(id: int, producto: Producto, db: Session = Depends(get_db)):
+    db_producto = db.query(models.ProductoDB).filter(models.ProductoDB.id == id).first()
+    db_producto.nombre = producto.nombre
+    db_producto.descripcion = producto.descripcion
+    db_producto.precio = producto.precio
     db.commit()
-    return {"message": "Celular eliminado"}
-# Actualizar un celular
-@app.put("/celulares/{id}")
-def update_celular(id: str, celular: Celular, db: Session = Depends(get_db)):
-    celular_db = db.query(models.CelularDB).filter(models.CelularDB.id == id).first()
-    if not celular_db:
-        raise HTTPException(status_code=404, detail="Celular no encontrado")
-    celular_db.marca = celular.marca
-    celular_db.modelo = celular.modelo
+    db.refresh(db_producto)
+    return {"message": "Producto actualizado"}
+
+@app.delete("/productos/{id}")
+def delete_producto(id: int, db: Session = Depends(get_db)):
+    db_producto = db.query(models.ProductoDB).filter(models.ProductoDB.id == id).first()
+    db.delete(db_producto)
     db.commit()
-    return {"message": "Celular actualizado"}
+
+    return {"message": "Producto eliminado"}
 
 
-#seccion de clientes
-@app.get("/clientes", response_model=List[Cliente])
-def get_clientes(db: Session = Depends(get_db)):
-    return db.query(models.ClienteDB).all()
 
-@app.post("/clientes", status_code=201)
-def create_cliente(cliente: Cliente, db: Session = Depends(get_db)):
-    db_cliente = models.ClienteDB(**cliente.dict())
-    db.add(db_cliente)
+
+# Endpoint Pedidos
+@app.get("/pedidos", response_model=List[Pedido])
+def get_pedidos(db: Session = Depends(get_db)):
+    return db.query(models.PedidoDB).all()
+
+@app.post("/pedidos", status_code=201)
+def create_pedido(pedido: Pedido, db: Session = Depends(get_db)):
+    db_pedido = models.PedidoDB(**pedido.dict())
+    db.add(db_pedido)
     db.commit()
-    db.refresh(db_cliente)
-    return {"message": "Cliente creado"}
+    db.refresh(db_pedido)
+    return {"message": "Pedido creado"}
 
-@app.delete("/clientes/{id}")
-def delete_cliente(id: str, db: Session = Depends(get_db)):
-    cliente = db.query(models.ClienteDB).filter(models.ClienteDB.id == id).first()
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    db.delete(cliente)
+@app.get("/pedidos/{id}", response_model=Pedido)
+def get_pedido(id: int, db: Session = Depends(get_db)):
+    return db.query(models.PedidoDB).filter(models.PedidoDB.id == id).first()
+
+@app.put("/pedidos/{id}")
+def update_pedido(id: int, pedido: Pedido, db: Session = Depends(get_db)):
+    db_pedido = db.query(models.PedidoDB).filter(models.PedidoDB.id == id).first()
+    db_pedido.fecha = pedido.fecha
+    db_pedido.total = pedido.total
     db.commit()
-    return {"message": "Cliente eliminado"}
+    db.refresh(db_pedido)
+    return {"message": "Pedido actualizado"}
 
-@app.put("/clientes/{id}")
-def update_cliente(id: str, cliente: Cliente, db: Session = Depends(get_db)):
-    cliente_db = db.query(models.ClienteDB).filter(models.ClienteDB.id == id).first()
-    if not cliente_db:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    cliente_db.nombre = cliente.nombre
-    cliente_db.apellido = cliente.apellido
+@app.delete("/pedidos/{id}")
+def delete_pedido(id: int, db: Session = Depends(get_db)):
+    db_pedido = db.query(models.PedidoDB).filter(models.PedidoDB.id == id).first()
+    db.delete(db_pedido)
     db.commit()
-    return {"message": "Cliente actualizado"}
+    return {"message": "Pedido eliminado"}
 
-#Seccion de proveedores
-@app.get("/proveedores", response_model=List[Proveedor])
-def get_proveedores(db: Session = Depends(get_db)):
-    return db.query(models.ProveedorDB).all()
 
-@app.post("/proveedores", status_code=201)
-def create_proveedor(proveedor: Proveedor, db: Session = Depends(get_db)):
-    db_proveedor = models.ProveedorDB(**proveedor.dict())
-    db.add(db_proveedor)
+# Endpoint Anotaciones
+@app.get("/pedidos/{pedido_id}/anotaciones", response_model=List[Anotacion])
+def get_anotaciones(pedido_id: int, db: Session = Depends(get_db)):
+    return db.query(models.AnotacionDB).filter(models.AnotacionDB.pedido_id == pedido_id).all()
+
+@app.post("/pedidos/{pedido_id}/anotaciones", status_code=201)
+def create_anotacion(pedido_id: int, anotacion: Anotacion, db: Session = Depends(get_db)):
+    db_anotacion = models.AnotacionDB(**anotacion.dict())
+    db.add(db_anotacion)
     db.commit()
-    db.refresh(db_proveedor)
-    return {"message": "Proveedor creado"}
+    db.refresh(db_anotacion)
+    return {"message": "Anotación creada"}
 
-@app.delete("/proveedores/{id}")
-def delete_proveedor(id: str, db: Session = Depends(get_db)):
-    proveedor = db.query(models.ProveedorDB).filter(models.ProveedorDB.id == id).first()
-    if not proveedor:
-        raise HTTPException(status_code=404, detail="Proveedor no encontrado")
-    db.delete(proveedor)
-    db.commit()
-    return {"message": "Proveedor eliminado"}
+@app.get("/pedidos/{pedido_id}/anotaciones/{id}", response_model=Anotacion)
+def get_anotacion(pedido_id: int, id: int, db: Session = Depends(get_db)):
+    return db.query(models.AnotacionDB).filter(models.AnotacionDB.id == id, models.AnotacionDB.pedido_id == pedido_id).first()
 
-@app.put("/proveedores/{id}")
-def update_proveedor(id: str, proveedor: Proveedor, db: Session = Depends(get_db)):
-    proveedor_db = db.query(models.ProveedorDB).filter(models.ProveedorDB.id == id).first()
-    if not proveedor_db:
-        raise HTTPException(status_code=404, detail="Proveedor no encontrado")
-    proveedor_db.nombre = proveedor.nombre
-    proveedor_db.direccion = proveedor.direccion
+@app.put("/pedidos/{pedido_id}/anotaciones/{id}")
+def update_anotacion(pedido_id: int, id: int, anotacion: Anotacion, db: Session = Depends(get_db)):
+    db_anotacion = db.query(models.AnotacionDB).filter(models.AnotacionDB.id == id, models.AnotacionDB.pedido_id == pedido_id).first()
+    db_anotacion.texto = anotacion.texto
     db.commit()
-    return {"message": "Proveedor actualizado"}
+    db.refresh(db_anotacion)
+    return {"message": "Anotación actualizada"}
+
+@app.delete("/pedidos/{pedido_id}/anotaciones/{id}")
+def delete_anotacion(pedido_id: int, id: int, db: Session = Depends(get_db)):
+    db_anotacion = db.query(models.AnotacionDB).filter(models.AnotacionDB.id == id, models.AnotacionDB.pedido_id == pedido_id).first()
+    db.delete(db_anotacion)
+    db.commit()
+    return {"message": "Anotación eliminada"}
+
+
+
+
+
+# Endpoint Anexos
+@app.get("/pedidos/{pedido_id}/anexos", response_model=List[Anexo])
+def get_anexos(pedido_id: int, db: Session = Depends(get_db)):
+    return db.query(models.AnexoDB).filter(models.AnexoDB.pedido_id == pedido_id).all()
+
+@app.post("/pedidos/{pedido_id}/anexos", status_code=201)
+def create_anexo(pedido_id: int, anexo: Anexo, db: Session = Depends(get_db)):
+    db_anexo = models.AnexoDB(**anexo.dict())
+    db.add(db_anexo)
+    db.commit()
+    db.refresh(db_anexo)
+    return {"message": "Anexo creado"}
+
+@app.get("/pedidos/{pedido_id}/anexos/{id}", response_model=Anexo)
+def get_anexo(pedido_id: int, id: int, db: Session = Depends(get_db)):
+    return db.query(models.AnexoDB).filter(models.AnexoDB.id == id, models.AnexoDB.pedido_id == pedido_id).first()
+
+@app.put("/pedidos/{pedido_id}/anexos/{id}")
+def update_anexo(pedido_id: int, id: int, anexo: Anexo, db: Session = Depends(get_db)):
+    db_anexo = db.query(models.AnexoDB).filter(models.AnexoDB.id == id, models.AnexoDB.pedido_id == pedido_id).first()
+    db_anexo.archivo = anexo.archivo
+    db.commit()
+    db.refresh(db_anexo)
+    return {"message": "Anexo actualizado"}
+
+@app.delete("/pedidos/{pedido_id}/anexos/{id}")
+def delete_anexo(pedido_id: int, id: int, db: Session = Depends(get_db)):
+    db_anexo = db.query(models.AnexoDB).filter(models.AnexoDB.id == id, models.AnexoDB.pedido_id == pedido_id).first()
+    db.delete(db_anexo)
+    db.commit()
+    return {"message": "Anexo eliminado"}
+
+
+
+
+
+# Endpoint Usuarios
+@app.get("/usuarios", response_model=List[Usuario])
+def get_usuarios(db: Session = Depends(get_db)):
+    return db.query(models.UsuarioDB).all()
+
+@app.post("/usuarios", status_code=201)
+def create_usuario(usuario: Usuario, db: Session = Depends(get_db)):
+    db_usuario = models.UsuarioDB(**usuario.dict())
+    db.add(db_usuario)
+    db.commit()
+    db.refresh(db_usuario)
+    return {"message": "Usuario creado"}
+
+@app.get("/usuarios/{id}", response_model=Usuario)
+def get_usuario(id: int, db: Session = Depends(get_db)):
+    return db.query(models.UsuarioDB).filter(models.UsuarioDB.id == id).first()
+
+@app.put("/usuarios/{id}")
+def update_usuario(id: int, usuario: Usuario, db: Session = Depends(get_db)):
+    db_usuario = db.query(models.UsuarioDB).filter(models.UsuarioDB.id == id).first()
+    db_usuario.nombre = usuario.nombre
+    db_usuario.apellido = usuario.apellido
+    db_usuario.email = usuario.email
+    db_usuario.password = usuario.password
+    db.commit()
+    db.refresh(db_usuario)
+    return {"message": "Usuario actualizado"}
+
+@app.delete("/usuarios/{id}")
+def delete_usuario(id: int, db: Session = Depends(get_db)):
+    db_usuario = db.query(models.UsuarioDB).filter(models.UsuarioDB.id == id).first()
+    db.delete(db_usuario)
+    db.commit()
+    return {"message": "Usuario eliminado"}
+
+
+# Endpoint Inventarios
+@app.get("/inventarios", response_model=List[Inventario])
+def get_inventarios(db: Session = Depends(get_db)):
+    return db.query(models.InventarioDB).all()
+
+@app.post("/inventarios", status_code=201)
+def create_inventario(inventario: Inventario, db: Session = Depends(get_db)):
+    db_inventario = models.InventarioDB(**inventario.dict())
+    db.add(db_inventario)
+    db.commit()
+    db.refresh(db_inventario)
+    return {"message": "Inventario creado"}
+
+@app.get("/inventarios/{id}", response_model=Inventario)
+def get_inventario(id: int, db: Session = Depends(get_db)):
+    return db.query(models.InventarioDB).filter(models.InventarioDB.id == id).first()
+
+@app.put("/inventarios/{id}")
+def update_inventario(id: int, inventario: Inventario, db: Session = Depends(get_db)):
+    db_inventario = db.query(models.InventarioDB).filter(models.InventarioDB.id == id).first()
+    db_inventario.producto_id = inventario.producto_id
+    db_inventario.cantidad = inventario.cantidad
+    db.commit()
+    db.refresh(db_inventario)
+    return {"message": "Inventario actualizado"}
+
+@app.delete("/inventarios/{id}")
+def delete_inventario(id: int, db: Session = Depends(get_db)):
+    db_inventario = db.query(models.InventarioDB).filter(models.InventarioDB.id == id).first()
+    db.delete(db_inventario)
+    db.commit()
+    return {"message": "Inventario eliminado"}
