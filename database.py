@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+
 # Configuración de la base de datos
 SQLALCHEMY_DATABASE_URL = "postgresql://postgres:123@localhost/restapos"
 
