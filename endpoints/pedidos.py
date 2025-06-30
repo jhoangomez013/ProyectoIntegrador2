@@ -3,8 +3,8 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from database import SessionLocal
-import models 
+from Base_De_Datos.database import SessionLocal
+from Base_De_Datos import models 
 from schemas import *
 from sqlalchemy.orm import Session
 

@@ -1,8 +1,8 @@
-from fastapi import Depends, HTTPException
-from database import SessionLocal
-import models
+from fastapi import HTTPException
+from Base_De_Datos.database import SessionLocal
+from Base_De_Datos import models
 from schemas import AnotacionCreate
-from models import AnotacionDB, DetallePedidoDB, InventarioDB, PedidoDB
+from Base_De_Datos.models import AnotacionDB, DetallePedidoDB, InventarioDB, PedidoDB
 from sqlalchemy.orm import Session
 
 def get_db():

@@ -4,9 +4,8 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from sqlalchemy.orm import Session
-import models
-from database import get_db
-from services import tiene_permiso
+from Base_De_Datos import models
+from Base_De_Datos.database import get_db
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

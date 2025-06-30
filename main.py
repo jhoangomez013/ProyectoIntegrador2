@@ -1,13 +1,11 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+
+from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 from typing import List
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session 
-from database import SessionLocal, engine
-import models 
-from models import AnotacionDB, DetallePedidoDB, PedidoDB
-from services import actualizar_pedido, actualizar_subtotal, actualizar_total_pedido, calcular_total_pedido
+from Base_De_Datos.database import SessionLocal, engine
+from Base_De_Datos import models 
 from schemas import *
 from endpoints import productos, pedidos, anotaciones, rol_permiso, usuarios, inventarios, detalle_pedido, permisos, rol, login
 
