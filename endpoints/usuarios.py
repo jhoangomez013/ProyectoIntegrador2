@@ -24,32 +24,26 @@ def get_db():
 pwd_context = CryptContext(schemes=["bcrypt"], default="bcrypt")
 
 app = APIRouter()
-templates = Jinja2Templates(directory="templates")
-# Servir archivos estáticos
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Endpoint Usuarios
-
-@app.get("/usuarios/me")
-async def read_users_me(token: str = Depends(oauth2_scheme)):
-    current_user = await get_current_user(token)
-    # Lógica para obtener información del usuario autenticado
-    return {"message": f"Hola, {current_user.username}"}
 
 #@app.get("/usuarios", response_model=List[Usuario])
 #def get_usuarios(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
 #    current_user = get_current_user(token, db)
-#    return db.query(models.UsuarioDB).all()
+#    rol = db.query(models.RolDB).filter(models.RolDB.id == current_user.rol_id).first()
+#    if rol and rol.nombre == "Administrador":
+#        return db.query(models.UsuarioDB).all()
+#    else:
+#        raise HTTPException(status_code=403, detail="No tienes permiso para ver la lista de usuarios")
+
 @app.get("/usuarios", response_model=List[Usuario])
 def get_usuarios(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     current_user = get_current_user(token, db)
-    permiso = db.query(models.PermisoDB).filter(models.PermisoDB.nombre == "ver_usuarios").first()
-    if not permiso:
-        raise HTTPException(status_code=500, detail="Permiso no encontrado")
-    if not tiene_permiso(current_user.id, permiso.id, db):
-        raise HTTPException(status_code=403, detail="No tienes permiso para ver la lista de usuarios")
-    return db.query(models.UsuarioDB).all()
-
+    permisos = db.query(models.PermisoDB).all()
+    for permiso in permisos:
+        if tiene_permiso(current_user.id, permiso.id, db):
+            return db.query(models.UsuarioDB).all()
+    raise HTTPException(status_code=403, detail="No tienes permiso para ver la lista de usuarios")
 
 @app.post("/usuarios", status_code=201)
 def create_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):

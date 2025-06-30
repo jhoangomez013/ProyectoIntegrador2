@@ -2,11 +2,15 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from auth import tiene_permiso
+from auth import get_current_user
 from database import SessionLocal
 import models 
 from schemas import *
-from sqlalchemy.orm import Session 
+from sqlalchemy.orm import Session
+from services import tiene_permiso 
+from fastapi.security import OAuth2PasswordBearer
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 def get_db():
     db = SessionLocal()
@@ -26,10 +30,12 @@ def get_inventarios(db: Session = Depends(get_db)):
     return db.query(models.InventarioDB).all()
 
 @app.get("/inventarios")
-def get_inventarios(usuario_id: int, db: Session = Depends(get_db)):
-    if not tiene_permiso(usuario_id, 1, db):  # 1 es el ID del permiso "Visualizar inventarios"
-        raise HTTPException(status_code=403, detail="No tiene permiso para visualizar inventarios")
-    return db.query(models.InventarioDB).all()
+def get_inventarios(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    current_user = get_current_user(token, db)
+    permiso = db.query(models.PermisoDB).filter(models.PermisoDB.nombre == "Inventarios").first()
+    if permiso and tiene_permiso(current_user.id, permiso.id, db):
+        return db.query(models.InventarioDB).all()
+    raise HTTPException(status_code=403, detail="No tienes permiso para ver inventarios")
 
 @app.post("/inventarios", status_code=201)
 def create_inventario(inventario: InventarioCreate, db: Session = Depends(get_db)):

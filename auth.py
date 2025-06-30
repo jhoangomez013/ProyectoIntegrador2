@@ -27,7 +27,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     if expires_delta is None:
         expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire.timestamp()})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -43,7 +43,9 @@ def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="login")
         if email is None:
             raise credentials_exception
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_signature": False})
+        expire = payload.get("exp")
+        raise HTTPException(status_code=401, detail=f"Token has expired. Expire time: {datetime.utcfromtimestamp(expire)}")
     except jwt.InvalidTokenError:
         raise credentials_exception
     user = db.query(models.UsuarioDB).filter(models.UsuarioDB.email == email).first()
