@@ -1,7 +1,16 @@
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+from database import SessionLocal
+import models
 from schemas import AnotacionCreate
 from models import AnotacionDB, DetallePedidoDB, InventarioDB, PedidoDB
 from sqlalchemy.orm import Session
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def calcular_subtotal(detalle_pedido):
     return detalle_pedido.cantidad * detalle_pedido.precio_unitario
@@ -73,3 +82,11 @@ def agregar_anotacion_pedido(pedido_id: int, anotacion: AnotacionCreate, db: Ses
     db.commit()
     db.refresh(db_anotacion)
     return db_anotacion
+
+def tiene_permiso(usuario_id: int, permiso_id: int, db: Session):
+    usuario = db.query(models.UsuarioDB).filter(models.UsuarioDB.id == usuario_id).first()
+    if not usuario:
+        return False
+    rol_id = usuario.rol_id
+    rol_permiso = db.query(models.RolPermisoDB).filter(models.RolPermisoDB.rol_id == rol_id, models.RolPermisoDB.permiso_id == permiso_id).first()
+    return rol_permiso is not None
